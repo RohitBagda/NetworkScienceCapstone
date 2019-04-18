@@ -4,11 +4,14 @@ import pandas as pd
 from Edge import *
 from EdgeProcessor import *
 
+headers = {'User-Agent':
+           'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.106 Safari/537.36'}
+
 url = "https://www.transfermarkt.co.uk/premier-league/transfers/wettbewerb/GB1/plus/?saison_id=2018&s_w=&leihe=0&intern=0&intern=1"
 url2 = "https://www.transfermarkt.co.uk/premier-league/transfers/wettbewerb/GB1/plus/?saison_id=2018&s_w=&leihe=0&leihe=1&intern=0&intern=1"
 edges = []
-file_name = "bundesliga.csv"
-for year in range(2000, 2019):
+file_name = "../data/bundesliga.csv"
+for year in range(2018, 2019):
     url_start = "https://www.transfermarkt.co.uk/bundesliga/transfers/wettbewerb/L1/plus/?saison_id="
     # url_start = "https://www.transfermarkt.co.uk/premier-league/transfers/wettbewerb/GB1/plus/?saison_id="
     year_as_string = str(year)

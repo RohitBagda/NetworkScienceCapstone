@@ -1,6 +1,3 @@
-from Edge import Edge
-
-
 class EdgeProcessor:
 
     def __init__(self):
