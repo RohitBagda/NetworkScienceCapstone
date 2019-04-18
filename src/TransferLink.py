@@ -27,5 +27,7 @@ class Edge:
     def __hash__(self):
         return hash(str(self))
 
+    def show_info(self):
+        print(self.source_team + ", " + self.target_team + ", " + str(self.amount))
 
 
