@@ -1,4 +1,4 @@
-class Edge:
+class TransferLink:
     def __init__(self, source_team, target_team, amount=0, player_pos=None,
                  player_name=None, player_nationality=None,
                  source_team_league=None, target_team_league=None):
