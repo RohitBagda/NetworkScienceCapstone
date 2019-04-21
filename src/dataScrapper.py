@@ -8,14 +8,12 @@ from decimal import Decimal
 headers = {'User-Agent':
            'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.106 Safari/537.36'}
 
-url = "https://www.transfermarkt.co.uk/premier-league/transfers/wettbewerb/GB1/plus/?saison_id=2018&s_w=&leihe=0&intern=0&intern=1"
-url2 = "https://www.transfermarkt.co.uk/premier-league/transfers/wettbewerb/GB1/plus/?saison_id=2018&s_w=&leihe=0&leihe=1&intern=0&intern=1"
-all_edges = []
 file_name = "../data/bundesliga.csv"
 url_start = "https://www.transfermarkt.us/"
 url_string_after_league_data = "/plus/?saison_id="
 url_end = "&s_w=&leihe=0&leihe=1&intern=0&intern=0" #Include Loans and no club internal transfers(ChelseaU23 to Chelsea)
 league_name_url_matcher = LeagueNameAndUrlMatcher()
+all_edges = []
 all_leagues = []
 
 
@@ -32,6 +30,15 @@ def process_amount(amount):
             amount = wo_currency_and_multiplier_amount*1000
         # Remove Trailing Zeros after Decimal Point
         return amount.quantize(Decimal(1)) if amount == amount.to_integral() else amount.normalize()
+
+
+def get_transfer_type(amount):
+    if "loan" in amount or "Loan" in amount:
+        return "Loan"
+    elif "Free Transfer" in amount:
+        return "Free Transfer"
+    else:
+        return "Transfer"
 
 
 for league_name in league_name_url_matcher.league_name_url_map:
@@ -84,16 +91,19 @@ for league_name in league_name_url_matcher.league_name_url_map:
                     target_team_details = tr.find("td", {"class": "no-border-links verein-flagge-transfer-cell"})
                     target_team = target_team_details.find("a", {"class": "vereinprofil_tooltip"})
                     target_team_name = tr.find("td", {"class": "no-border-rechts zentriert"}).find("img").get("alt")
+                    transfer_type = get_transfer_type(player_amount)
                     processed_amount = process_amount(player_amount)
                     if target_team:
                         target_team_id = target_team.get("id")
                         retired_id = 123
                         without_club_id = 515
-                        if target_team_id != retired_id or target_team_id != without_club_id:
+                        career_break_id = 2113
+                        if target_team_id != retired_id or target_team_id != without_club_id or \
+                                target_team_id != career_break_id:
                             link = TransferLink(source_team_id=source_team_id, target_team_id=target_team_id,
                                                 amount=processed_amount, player_pos=player_pos,
                                                 source_team_name=source_team_name, target_team_name=target_team_name,
-                                                player_name=player_name)
+                                                player_name=player_name, transfer_type=transfer_type)
                             league.transfers_for_year[year].append(link)
 
         print("------Finished calculating data for " + year_as_string + "----------")

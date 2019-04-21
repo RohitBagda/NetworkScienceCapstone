@@ -1,7 +1,8 @@
 class TransferLink:
     def __init__(self, source_team_id, target_team_id, amount=0, player_pos=None,
                  player_name=None, player_nationality=None,
-                 source_team_league=None, target_team_league=None, source_team_name=None, target_team_name=None):
+                 source_team_league=None, target_team_league=None, source_team_name=None, target_team_name=None,
+                 transfer_type=None):
         self.source_team_id = source_team_id
         self.target_team_id = target_team_id
         self.amount = amount
@@ -12,6 +13,7 @@ class TransferLink:
         self.target_team_league = target_team_league
         self.source_team_name = source_team_name
         self.target_team_name = target_team_name
+        self.transfer_type = transfer_type
 
     def __eq__(self, other):
         if isinstance(other, self.__class__):
@@ -30,7 +32,7 @@ class TransferLink:
         return hash(str(self))
 
     def show_info(self):
-        print(self.player_name + ", " + self.player_pos + ", " + self.source_team_id + ", " + self.source_team_name + ", " +
-              self.target_team_id + ", " + self.target_team_name + ", " + str(self.amount))
-
+        print(self.player_name + ", " + self.player_pos + ", " + self.source_team_id + ", " + self.source_team_name +
+              ", " + self.target_team_id + ", " + self.target_team_name + ", " + str(self.amount) + ", " +
+              self.transfer_type)
 
