@@ -40,8 +40,6 @@ for league_name in league_name_url_matcher.league_name_url_map:
     # league_edges = []
     for year in range(2018, 2019):
         league.transfers_for_year[year] = []
-        # url_start = "https://www.transfermarkt.co.uk/bundesliga/transfers/wettbewerb/L1/plus/?saison_id="
-        # url_start = "https://www.transfermarkt.co.uk/premier-league/transfers/wettbewerb/GB1/plus/?saison_id="
         year_as_string = str(year)
         url_end = "&s_w=&leihe=0&leihe=1&intern=0"
         full_url = url_start + league_name_url_matcher.league_name_url_map[league_name] + \
@@ -72,24 +70,30 @@ for league_name in league_name_url_matcher.league_name_url_map:
         for t in tuples:
             if t[0] and t[1]:
                 # print("=======================================================================================================")
-                club = t[0][0].select("a", {"class": "vereinprofil_tooltip"})[1]
-                club_name = club.get_text()
-                club_id = club.get("id")
-                table_div = t[1]
-                if table_div:
-                    transfers_out = t[1][0]
-                    trs = transfers_out.find_all("tr")
-                    for i in range(1, len(trs)):
-                        tr = trs[i]
-                        player_name = tr.find("span", {"class": "hide-for-small"}).get_text()
-                        player_amount = tr.find_all("td", {"class": "rechts"})[1].get_text()
-                        processed_amount = process_amount(player_amount)
-                        target_team_details = tr.find("td", {"class": "no-border-links verein-flagge-transfer-cell"})
-                        target_team = target_team_details.find("a", {"class": "vereinprofil_tooltip"})
-                        if target_team:
-                            target_team_id = target_team.get("id")
-                            link = TransferLink(source_team=club_id, target_team=target_team_id,
-                                                amount=processed_amount)
+                source_team = t[0][0].select("a", {"class": "vereinprofil_tooltip"})
+                source_team_name = source_team[0].find("img").get("alt")
+                source_team_id = source_team[1].get("id")
+                transfers_out = t[1][0]
+                trs = transfers_out.find_all("tr")
+                for i in range(1, len(trs)):
+                    tr = trs[i]
+                    player_name = tr.find("span", {"class": "hide-for-small"}).get_text()
+                    # Index 0 has market Value. Index 1 has Transfer Fee
+                    player_amount = tr.find_all("td", {"class": "rechts"})[1].get_text()
+                    player_pos = tr.find_all("td", {"class": "pos-transfer-cell"})[0].get_text()
+                    target_team_details = tr.find("td", {"class": "no-border-links verein-flagge-transfer-cell"})
+                    target_team = target_team_details.find("a", {"class": "vereinprofil_tooltip"})
+                    target_team_name = tr.find("td", {"class": "no-border-rechts zentriert"}).find("img").get("alt")
+                    processed_amount = process_amount(player_amount)
+                    if target_team:
+                        target_team_id = target_team.get("id")
+                        retired_id = 123
+                        without_club_id = 515
+                        if target_team_id != retired_id or target_team_id != without_club_id:
+                            link = TransferLink(source_team_id=source_team_id, target_team_id=target_team_id,
+                                                amount=processed_amount, player_pos=player_pos,
+                                                source_team_name=source_team_name, target_team_name=target_team_name,
+                                                player_name=player_name)
                             league.transfers_for_year[year].append(link)
 
         print("------Finished calculating data for " + year_as_string + "----------")
