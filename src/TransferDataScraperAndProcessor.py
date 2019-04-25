@@ -1,5 +1,6 @@
 import requests
 import os
+import csv
 from bs4 import BeautifulSoup
 from TransferLink import *
 from LeagueURLConstants import *
@@ -157,37 +158,31 @@ class TransferDataScraperAndProcessor:
         file_path = "../data/all_edges_num_players_as_weights_" + str(self.start_year) + "_" + str(self.end_year) + ".csv"
         if os.path.exists(file_path):
             os.remove(file_path)
-        with open(file_path, "w") as file:
-            file.write("source,target,weight\n")
+        with open(file_path, 'w', newline='\n', encoding='utf-8') as file:
+            writer = csv.writer(file, delimiter=',')
+            writer.writerow(["source", "target", "weight"])
             for edge in self.all_unique_edges:
-                file.write(edge.source_team_id + ",")
-                file.write(edge.target_team_id + ",")
-                file.write(str(self.all_unique_edges[edge].num_players))
-                file.write("\n")
+                writer.writerow([edge.source_team_id, edge.target_team_id, str(self.all_unique_edges[edge].num_players)])
 
     def write_overall_output_with_weights_as_total_cost(self):
         file_path = "../data/all_edges_total_cost_as_weights_" + str(self.start_year) + "_" + str(self.end_year) + ".csv"
         if os.path.exists(file_path):
             os.remove(file_path)
-        with open(file_path, 'w') as file:
-            file.write("source,target,weight\n")
+        with open(file_path, 'w', newline='\n', encoding='utf-8') as file:
+            writer = csv.writer(file, delimiter=',')
+            writer.writerow(["source", "target", "weight"])
             for edge in self.all_unique_edges:
-                file.write(edge.source_team_id + ",")
-                file.write(edge.target_team_id + ",")
-                file.write(str(self.all_unique_edges[edge].total_amount))
-                file.write("\n")
+                writer.writerow([edge.source_team_id, edge.target_team_id, str(self.all_unique_edges[edge].total_amount)])
 
     def write_output_file_for_loans(self):
         file_path = "../data/overall_loan_network_" + str(self.start_year) + "_" + str(self.end_year) + ".csv"
         if os.path.exists(file_path):
             os.remove(file_path)
-        with open(file_path, 'w') as file:
-            file.write("source,target,weight\n")
+        with open(file_path, 'w', newline='\n', encoding='utf-8') as file:
+            writer = csv.writer(file, delimiter=',')
+            writer.writerow(["source", "target", "weight"])
             for edge in self.all_unique_loan_edges:
-                file.write(edge.source_team_id + ",")
-                file.write(edge.target_team_id + ",")
-                file.write(str(self.all_unique_loan_edges[edge].num_players))
-                file.write("\n")
+                writer.writerow([edge.source_team_id, edge.target_team_id, str(self.all_unique_loan_edges[edge].num_players)])
 
     def put_all_clubs_in_a_league(self):
         other_league = League("Other")
@@ -205,23 +200,20 @@ class TransferDataScraperAndProcessor:
         file_path = "../data/all_node_communities_"  + str(self.start_year) + "_" + str(self.end_year) + ".csv"
         if os.path.exists(file_path):
             os.remove(file_path)
-        with open(file_path, 'w') as file:
-            file.write("node,type\n")
+        with open(file_path, 'w', newline='\n', encoding='utf-8') as file:
+            writer = csv.writer(file, delimiter=',')
+            writer.writerow(["node", "type"])
             for league in self.all_leagues:
                 for club in league.clubs:
-                    file.write(str(club.club_id) + "," + league.league_name)
-                    file.write("\n")
+                    writer.writerow([str(club.club_id), league.league_name])
 
     def write_out_all_clubs_and_names(self):
         file_path = "../data/all_nodes_"  + str(self.start_year) + "_" + str(self.end_year) + ".csv"
         if os.path.exists(file_path):
             os.remove(file_path)
-        with open(file_path, 'w') as file:
-            file.write("node,label\n")
+        with open(file_path, 'w', newline='\n', encoding='utf-8') as file:
+            writer = csv.writer(file, delimiter=',')
+            writer.writerow(["node", "label"])
             for club in self.all_clubs:
-                file.write(str(club.club_id) + "," + club.club_name)
-                file.write("\n")
-
-
-
+                writer.writerow([str(club.club_id), club.club_name])
 
