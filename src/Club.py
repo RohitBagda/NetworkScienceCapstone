@@ -13,8 +13,5 @@ class Club:
             return self.club_id != other.club_id
         return False
 
-    def __str__(self):
-        return str(self.club_id)
-
     def __hash__(self):
-        return hash(str(self))
+        return hash(self.club_id)

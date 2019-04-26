@@ -29,10 +29,10 @@ class LeagueURLConstants:
     LIGA_NOS_URL = "primeira-liga/transfers/wettbewerb/PO1"
 
     league_names_with_urls = {
-        BUNDESLIGA: BUNDESLIGA_URL,
         PREMIER_LEAGUE: PREMIER_LEAGUE_URL,
         LA_LIGA: LA_LIGA_URL,
         SERIA_A: SERIA_A_URL,
+        BUNDESLIGA: BUNDESLIGA_URL,
         LIGUE_1: LIGUE_1_URL,
         PREMIER_LIGA: PREMIER_LIGA_URL,
         LIGA_NOS: LIGA_NOS_URL
