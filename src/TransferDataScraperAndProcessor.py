@@ -28,6 +28,7 @@ class TransferDataScraperAndProcessor:
         self.all_non_loan_transfers = set()
         self.all_leagues = set()  # all leagues
         self.all_clubs = set()  # all clubs. Each club object has a club id and name
+        self.all_countries_and_clubs = {}
         self.process_all_data(self.start_year, self.end_year)
         self.all_unique_edges = self.generate_unique_edges(self.all_transfers)
         self.all_unique_loan_edges = self.generate_unique_edges(self.all_loan_transfers)
@@ -52,6 +53,7 @@ class TransferDataScraperAndProcessor:
                 boxes = page_soup.findAll("div", {"class": "box"})
                 club_boxes = [box for box in boxes if box]
 
+                country_header_box = club_boxes[0]
                 # Remove the First 3 Box elements that are at the top of each page.
                 club_boxes = club_boxes[3:]
 
@@ -69,6 +71,9 @@ class TransferDataScraperAndProcessor:
                     header_div_tuple_in = (table_headers, responsive_table_in_transfers)
                     tuples_in.append(header_div_tuple_in)
 
+                header_team_country = self.get_header_country(country_header_box)
+                if header_team_country not in self.all_countries_and_clubs:
+                    self.all_countries_and_clubs[header_team_country] = set()
                 for t in tuples_out:
                     if t[0] and t[1]:
                         # print("=====================================================================================")
@@ -80,7 +85,8 @@ class TransferDataScraperAndProcessor:
                         if "No departures" in trs[1].find("td").get_text():
                             continue
                         else:
-                            source_team_club = Club(source_team_id, source_team_name)
+                            source_team_club = Club(source_team_id, source_team_name, header_team_country)
+                            self.all_countries_and_clubs[header_team_country].add(source_team_club)
                             if source_team_club not in self.all_clubs:
                                 self.all_clubs.add(source_team_club)
                             for i in range(1, len(trs)):
@@ -97,6 +103,7 @@ class TransferDataScraperAndProcessor:
                                 if target_team:
                                     target_team_id = self.get_tr_team_id(target_team)
                                     if self.valid_football_club(target_team_id):
+                                        target_team_country = self.get_tr_team_country(target_team_details)
                                         link = TransferLink(source_team_id=source_team_id,
                                                             target_team_id=target_team_id,
                                                             amount=processed_amount,
@@ -109,7 +116,10 @@ class TransferDataScraperAndProcessor:
                                         league.transfers_for_year[year].add(link)
                                         league.all_transfers.add(link)
                                         self.all_transfers.add(link)
-                                        target_club = Club(target_team_id, target_team_name)
+                                        target_club = Club(target_team_id, target_team_name, target_team_country)
+                                        if target_team_country not in self.all_countries_and_clubs:
+                                            self.all_countries_and_clubs[target_team_country] = set()
+                                        self.all_countries_and_clubs[target_team_country].add(target_club)
                                         if target_club not in self.all_clubs:
                                             self.all_clubs.add(target_club)
                                         if transfer_type == "Loan":
@@ -134,7 +144,8 @@ class TransferDataScraperAndProcessor:
                         if "No arrivals" in trs[1].find("td").get_text():
                             continue
                         else:
-                            target_team_club = Club(target_team_id, target_team_name)
+                            target_team_club = Club(target_team_id, target_team_name, header_team_country)
+                            self.all_countries_and_clubs[header_team_country].add(target_team_club)
                             if target_team_club not in self.all_clubs:
                                 self.all_clubs.add(target_team_club)
                             for i in range(1, len(trs)):
@@ -150,6 +161,7 @@ class TransferDataScraperAndProcessor:
                                 if source_team:
                                     source_team_id = self.get_tr_team_id(source_team)
                                     if self.valid_football_club(source_team_id):
+                                        source_team_country = self.get_tr_team_country(source_team_details)
                                         link = TransferLink(source_team_id=source_team_id,
                                                             target_team_id=target_team_id,
                                                             amount=processed_amount,
@@ -162,7 +174,10 @@ class TransferDataScraperAndProcessor:
                                         league.transfers_for_year[year].add(link)
                                         league.all_transfers.add(link)
                                         self.all_transfers.add(link)
-                                        source_club = Club(source_team_id, source_team_name)
+                                        source_club = Club(source_team_id, source_team_name, source_team_country)
+                                        if source_team_country not in self.all_countries_and_clubs:
+                                            self.all_countries_and_clubs[source_team_country] = set()
+                                        self.all_countries_and_clubs[source_team_country].add(source_club)
                                         if source_club not in self.all_clubs:
                                             self.all_clubs.add(source_club)
                                         if transfer_type == "Loan":
@@ -176,6 +191,9 @@ class TransferDataScraperAndProcessor:
 
                 print("------Finished calculating data for " + year_as_string + "----------")
             self.all_leagues.add(league)
+
+    def get_header_country(self, box):
+        return box.find("div", {"class": "box-header"}).find("img").get("alt")
 
     def get_header_team_details(self, t):
         return t[0][0].select("a", {"class": "vereinprofil_tooltip"})
@@ -210,6 +228,9 @@ class TransferDataScraperAndProcessor:
 
     def get_tr_team_id(self, team):
         return team.get("id")
+
+    def get_tr_team_country(self, team_details):
+        return team_details.find("img").get("alt")
 
     def process_amount(self, amount):
         # if amount == "-" or amount == "Loan" or amount == "Free Transfer" or ("End of loan" in amount) or amount == \
@@ -337,3 +358,17 @@ class TransferDataScraperAndProcessor:
                 print(league.league_name + ", " + str(len(league.clubs)))
                 for club in league.clubs:
                     writer.writerow([str(club.club_id), club.club_name, league.league_name])
+
+    def write_out_clubs_and_countries(self):
+        file_path = "../data/all_nodes_countries" + str(self.start_year) + "_" + str(self.end_year) + ".csv"
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        with open(file_path, 'w', newline='\n', encoding='utf-8') as file:
+            writer = csv.writer(file, delimiter=',')
+            writer.writerow(["id", "Label", "Modularity Class"])
+            for country in self.all_countries_and_clubs:
+                clubs = self.all_countries_and_clubs[country]
+                print(country + ", " + str(len(clubs)))
+                for club in clubs:
+                    writer.writerow([str(club.club_id), club.club_name, club.club_country])
+

@@ -1,7 +1,8 @@
 class Club:
-    def __init__(self, club_id, club_name):
+    def __init__(self, club_id, club_name, club_country):
         self.club_id = club_id
         self.club_name = club_name
+        self.club_country = club_country
 
     def __eq__(self, other):
         if isinstance(other, self.__class__):
