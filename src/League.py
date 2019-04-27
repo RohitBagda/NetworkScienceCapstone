@@ -5,6 +5,7 @@ class League:
         self.clubs = set()
         self.all_transfers = set()
         self.loan_transfers = set()
+        self.non_loan_transfers = set()
 
     def __eq__(self, other):
         if isinstance(other, self.__class__):

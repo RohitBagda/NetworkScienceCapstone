@@ -13,9 +13,10 @@ from decimal import Decimal
 
 class TransferDataScraperAndProcessor:
 
-    def __init__(self, start_year, end_year):
+    def __init__(self, start_year, end_year, should_include_loans=False):
         self.start_year = start_year
         self.end_year = end_year
+        self.should_include_loans = should_include_loans
         self.headers = {'User-Agent':
             'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.106 Safari/537.36'}
 
@@ -24,11 +25,13 @@ class TransferDataScraperAndProcessor:
         self.url_end = "&s_w=&leihe=0&leihe=1&intern=0&intern=0"  # Include Loans and no club internal transfers(ChelseaU23 to Chelsea)
         self.all_transfers = set()  # all transfer links
         self.all_loan_transfers = set()  # all loan transfers
+        self.all_non_loan_transfers = set()
         self.all_leagues = set()  # all leagues
         self.all_clubs = set()  # all clubs. Each club object has a club id and name
         self.process_all_data(self.start_year, self.end_year)
         self.all_unique_edges = self.generate_unique_edges(self.all_transfers)
         self.all_unique_loan_edges = self.generate_unique_edges(self.all_loan_transfers)
+        self.all_unique_non_loan_edges = self.generate_unique_edges(self.all_non_loan_transfers)
         self.put_all_clubs_in_a_league()
 
     def process_all_data(self, start_year, end_year):
@@ -74,42 +77,49 @@ class TransferDataScraperAndProcessor:
                         source_team_id = self.get_header_team_id(source_team_details)
                         transfers_out = t[1][0]
                         trs = self.get_all_trs(transfers_out)
-                        source_team_club = Club(source_team_id, source_team_name)
-                        if source_team_club not in self.all_clubs:
-                            self.all_clubs.add(source_team_club)
-                        for i in range(1, len(trs)):
-                            tr = trs[i]
-                            player_name = self.get_player_name(tr)
-                            player_amount = self.get_player_amount(tr)
-                            player_pos = self.get_player_position(tr)
-                            target_team_details = self.get_tr_team_details(tr)
-                            target_team = self.get_tr_team(target_team_details)
-                            target_team_name = self.get_tr_team_name(tr)
-                            transfer_type = self.get_transfer_type(player_amount)
-                            processed_amount = self.process_amount(player_amount)
-                            if target_team:
-                                target_team_id = self.get_tr_team_id(target_team)
-                                if self.valid_football_club(target_team_id):
-                                    link = TransferLink(source_team_id=source_team_id,
-                                                        target_team_id=target_team_id,
-                                                        amount=processed_amount,
-                                                        player_pos=player_pos,
-                                                        source_team_name=source_team_name,
-                                                        target_team_name=target_team_name,
-                                                        player_name=player_name,
-                                                        transfer_type=transfer_type,
-                                                        year=year)
-                                    league.transfers_for_year[year].add(link)
-                                    league.all_transfers.add(link)
-                                    self.all_transfers.add(link)
-                                    target_club = Club(target_team_id, target_team_name)
-                                    if target_club not in self.all_clubs:
-                                        self.all_clubs.add(target_club)
-                                    if transfer_type == "Loan":
-                                        self.all_loan_transfers.add(link)
-                                        league.loan_transfers.add(link)
-                                    if source_team_club not in league.clubs:
-                                        league.clubs.add(source_team_club)
+                        if "No departures" in trs[1].find("td").get_text():
+                            continue
+                        else:
+                            source_team_club = Club(source_team_id, source_team_name)
+                            if source_team_club not in self.all_clubs:
+                                self.all_clubs.add(source_team_club)
+                            for i in range(1, len(trs)):
+                                tr = trs[i]
+                                player_name = self.get_player_name(tr)
+                                player_amount = self.get_player_amount(tr)
+                                player_pos = self.get_player_position(tr)
+                                target_team_details = self.get_tr_team_details(tr)
+                                target_team = self.get_tr_team(target_team_details)
+                                target_team_name = self.get_tr_team_name(tr)
+                                transfer_type = self.get_transfer_type(player_amount)
+                                processed_amount = self.process_amount(player_amount)
+
+                                if target_team:
+                                    target_team_id = self.get_tr_team_id(target_team)
+                                    if self.valid_football_club(target_team_id):
+                                        link = TransferLink(source_team_id=source_team_id,
+                                                            target_team_id=target_team_id,
+                                                            amount=processed_amount,
+                                                            player_pos=player_pos,
+                                                            source_team_name=source_team_name,
+                                                            target_team_name=target_team_name,
+                                                            player_name=player_name,
+                                                            transfer_type=transfer_type,
+                                                            year=year)
+                                        league.transfers_for_year[year].add(link)
+                                        league.all_transfers.add(link)
+                                        self.all_transfers.add(link)
+                                        target_club = Club(target_team_id, target_team_name)
+                                        if target_club not in self.all_clubs:
+                                            self.all_clubs.add(target_club)
+                                        if transfer_type == "Loan":
+                                            self.all_loan_transfers.add(link)
+                                            league.loan_transfers.add(link)
+                                        else:
+                                            self.all_non_loan_transfers.add(link)
+                                            league.non_loan_transfers.add(link)
+                                        if source_team_club not in league.clubs:
+                                            league.clubs.add(source_team_club)
 
                 # -----------------Transfers IN ------------------------------------------------------------------------
 
@@ -121,42 +131,48 @@ class TransferDataScraperAndProcessor:
                         target_team_id = self.get_header_team_id(target_team_details)
                         transfers_in = t[1][0]
                         trs = self.get_all_trs(transfers_in)
-                        target_team_club = Club(target_team_id, target_team_name)
-                        if target_team_club not in self.all_clubs:
-                            self.all_clubs.add(target_team_club)
-                        for i in range(1, len(trs)):
-                            tr = trs[i]
-                            player_name = self.get_player_name(tr)
-                            player_amount = self.get_player_amount(tr)
-                            player_pos = self.get_player_position(tr)
-                            source_team_details = self.get_tr_team_details(tr)
-                            source_team = self.get_tr_team(source_team_details)
-                            source_team_name = self.get_tr_team_name(tr)
-                            transfer_type = self.get_transfer_type(player_amount)
-                            processed_amount = self.process_amount(player_amount)
-                            if source_team:
-                                source_team_id = self.get_tr_team_id(source_team)
-                                if self.valid_football_club(source_team_id):
-                                    link = TransferLink(source_team_id=source_team_id,
-                                                        target_team_id=target_team_id,
-                                                        amount=processed_amount,
-                                                        player_pos=player_pos,
-                                                        source_team_name=source_team_name,
-                                                        target_team_name=target_team_name,
-                                                        player_name=player_name,
-                                                        transfer_type=transfer_type,
-                                                        year=year)
-                                    league.transfers_for_year[year].add(link)
-                                    league.all_transfers.add(link)
-                                    self.all_transfers.add(link)
-                                    source_club = Club(source_team_id, source_team_name)
-                                    if source_club not in self.all_clubs:
-                                        self.all_clubs.add(source_club)
-                                    if transfer_type == "Loan":
-                                        self.all_loan_transfers.add(link)
-                                        league.loan_transfers.add(link)
-                                    if target_team_club not in league.clubs:
-                                        league.clubs.add(target_team_club)
+                        if "No arrivals" in trs[1].find("td").get_text():
+                            continue
+                        else:
+                            target_team_club = Club(target_team_id, target_team_name)
+                            if target_team_club not in self.all_clubs:
+                                self.all_clubs.add(target_team_club)
+                            for i in range(1, len(trs)):
+                                tr = trs[i]
+                                player_name = self.get_player_name(tr)
+                                player_amount = self.get_player_amount(tr)
+                                player_pos = self.get_player_position(tr)
+                                source_team_details = self.get_tr_team_details(tr)
+                                source_team = self.get_tr_team(source_team_details)
+                                source_team_name = self.get_tr_team_name(tr)
+                                transfer_type = self.get_transfer_type(player_amount)
+                                processed_amount = self.process_amount(player_amount)
+                                if source_team:
+                                    source_team_id = self.get_tr_team_id(source_team)
+                                    if self.valid_football_club(source_team_id):
+                                        link = TransferLink(source_team_id=source_team_id,
+                                                            target_team_id=target_team_id,
+                                                            amount=processed_amount,
+                                                            player_pos=player_pos,
+                                                            source_team_name=source_team_name,
+                                                            target_team_name=target_team_name,
+                                                            player_name=player_name,
+                                                            transfer_type=transfer_type,
+                                                            year=year)
+                                        league.transfers_for_year[year].add(link)
+                                        league.all_transfers.add(link)
+                                        self.all_transfers.add(link)
+                                        source_club = Club(source_team_id, source_team_name)
+                                        if source_club not in self.all_clubs:
+                                            self.all_clubs.add(source_club)
+                                        if transfer_type == "Loan":
+                                            self.all_loan_transfers.add(link)
+                                            league.loan_transfers.add(link)
+                                        else:
+                                            self.all_non_loan_transfers.add(link)
+                                            league.non_loan_transfers.add(link)
+                                        if target_team_club not in league.clubs:
+                                            league.clubs.add(target_team_club)
 
                 print("------Finished calculating data for " + year_as_string + "----------")
             self.all_leagues.add(league)
@@ -196,7 +212,10 @@ class TransferDataScraperAndProcessor:
         return team.get("id")
 
     def process_amount(self, amount):
-        if amount == "-" or amount == "Loan" or amount == "Free Transfer" or ("End of loan" in amount) or amount == "?":
+        # if amount == "-" or amount == "Loan" or amount == "Free Transfer" or ("End of loan" in amount) or amount == \
+        #         "?" or amount == "" or amount == "draft":
+        #     return 0
+        if '$' not in amount:
             return 0
         else:
             wo_currency_amount = amount[amount.index('$') + 1:]
@@ -206,6 +225,8 @@ class TransferDataScraperAndProcessor:
                 amount = wo_currency_and_multiplier_amount * 1000000
             elif multiplier_symbol == 'k':
                 amount = wo_currency_and_multiplier_amount * 1000
+            else:
+                amount = Decimal(wo_currency_amount)
             # Remove Trailing Zeros after Decimal Point
             return amount.quantize(Decimal(1)) if amount == amount.to_integral() else amount.normalize()
 
@@ -246,25 +267,23 @@ class TransferDataScraperAndProcessor:
                 unique_edges[unique_edge] = EdgeWeight(1, link.amount)
         return unique_edges
 
-    def write_overall_output_with_weights_as_num_players(self):
-        file_path = "../data/all_edges_num_players_as_weights_" + str(self.start_year) + "_" + str(self.end_year) + ".csv"
+    def write_overall_output_with_weights(self, use_amount_as_weight=True):
+        if use_amount_as_weight:
+            file_path_start = "../data/all_edges_total_cost_as_weights_"
+        else:
+            file_path_start = "../data/all_edges_num_players_as_weights_"
+        file_path = file_path_start +  str(self.start_year) + "_" + str(self.end_year) + ".csv"
         if os.path.exists(file_path):
             os.remove(file_path)
         with open(file_path, 'w', newline='\n', encoding='utf-8') as file:
             writer = csv.writer(file, delimiter=',')
             writer.writerow(["source", "target", "weight"])
             for edge in self.all_unique_edges:
-                writer.writerow([edge.source_id, edge.target_id, str(self.all_unique_edges[edge].num_players)])
-
-    def write_overall_output_with_weights_as_total_cost(self):
-        file_path = "../data/all_edges_total_cost_as_weights_" + str(self.start_year) + "_" + str(self.end_year) + ".csv"
-        if os.path.exists(file_path):
-            os.remove(file_path)
-        with open(file_path, 'w', newline='\n', encoding='utf-8') as file:
-            writer = csv.writer(file, delimiter=',')
-            writer.writerow(["source", "target", "weight"])
-            for edge in self.all_unique_edges:
-                writer.writerow([edge.source_id, edge.target_id, str(self.all_unique_edges[edge].total_amount)])
+                if use_amount_as_weight:
+                    weight = str(self.all_unique_edges[edge].total_amount)
+                else:
+                    weight = str(self.all_unique_edges[edge].num_players)
+                writer.writerow([edge.source_id, edge.target_id, weight])
 
     def write_output_file_for_loans(self):
         file_path = "../data/overall_loan_network_" + str(self.start_year) + "_" + str(self.end_year) + ".csv"
@@ -275,6 +294,24 @@ class TransferDataScraperAndProcessor:
             writer.writerow(["source", "target", "weight"])
             for edge in self.all_unique_loan_edges:
                 writer.writerow([edge.source_id, edge.target_id, str(self.all_unique_loan_edges[edge].num_players)])
+
+    def write_output_file_for_non_loan_transfers(self, use_amount_as_weight=True):
+        if use_amount_as_weight:
+            file_path_start = "../data/overall_non_loan_network_weights_as_total_cost"
+        else:
+            file_path_start = "../data/overall_non_loan_network_weights_as_num_players"
+        file_path = file_path_start + str(self.start_year) + "_" + str(self.end_year) + ".csv"
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        with open(file_path, 'w', newline='\n', encoding='utf-8') as file:
+            writer = csv.writer(file, delimiter=',')
+            writer.writerow(["source", "target", "weight"])
+            for edge in self.all_unique_non_loan_edges:
+                if use_amount_as_weight:
+                    weight = str(self.all_unique_edges[edge].total_amount)
+                else:
+                    weight = str(self.all_unique_edges[edge].num_players)
+                writer.writerow([edge.source_id, edge.target_id, weight])
 
     def put_all_clubs_in_a_league(self):
         other_league = League("Other")
@@ -288,16 +325,6 @@ class TransferDataScraperAndProcessor:
                 other_league.clubs.add(club)
         self.all_leagues.add(other_league)
 
-    def write_out_node_communities(self):
-        file_path = "../data/all_node_communities_"  + str(self.start_year) + "_" + str(self.end_year) + ".csv"
-        if os.path.exists(file_path):
-            os.remove(file_path)
-        with open(file_path, 'w', newline='\n', encoding='utf-8') as file:
-            writer = csv.writer(file, delimiter=',')
-            writer.writerow(["node", "type"])
-            for league in self.all_leagues:
-                for club in league.clubs:
-                    writer.writerow([str(club.club_id), league.league_name])
 
     def write_out_all_clubs_and_names(self):
         file_path = "../data/all_nodes_"  + str(self.start_year) + "_" + str(self.end_year) + ".csv"
@@ -305,7 +332,8 @@ class TransferDataScraperAndProcessor:
             os.remove(file_path)
         with open(file_path, 'w', newline='\n', encoding='utf-8') as file:
             writer = csv.writer(file, delimiter=',')
-            writer.writerow(["node", "label"])
-            for club in self.all_clubs:
-                writer.writerow([str(club.club_id), club.club_name])
-
+            writer.writerow(["id", "Label", "Modularity Class"])
+            for league in self.all_leagues:
+                print(league.league_name + ", " + str(len(league.clubs)))
+                for club in league.clubs:
+                    writer.writerow([str(club.club_id), club.club_name, league.league_name])
