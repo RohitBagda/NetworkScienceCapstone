@@ -4,7 +4,7 @@ import time
 def main():
     start = time.time()
     # try:
-    scraper_tool = TransferDataScraperAndProcessor(start_year=2000, end_year=2018)
+    scraper_tool = TransferDataScraperAndProcessor(start_year=2018, end_year=2018)
     scraper_tool.write_out_all_clubs_and_names()
     scraper_tool.write_output_file_for_loans()
     scraper_tool.write_overall_output_with_weights(use_amount_as_weight=True)
