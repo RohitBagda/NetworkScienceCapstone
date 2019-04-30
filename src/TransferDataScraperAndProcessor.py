@@ -9,6 +9,7 @@ from EdgeWeight import *
 from League import *
 from UniqueEdge import *
 from decimal import Decimal
+import re
 
 
 class TransferDataScraperAndProcessor:
@@ -56,6 +57,12 @@ class TransferDataScraperAndProcessor:
                 country_header_box = club_boxes[0]
                 # Remove the First 3 Box elements that are at the top of each page.
                 club_boxes = club_boxes[3:]
+
+                league_total_transaction_data = self.get_income_expenditure_per_year_data(page_soup)
+                league_income_for_year = self.get_income_per_year(league_total_transaction_data)
+                league_expenditure_for_year = self.get_expenditure_per_year(league_total_transaction_data)
+                clean_league_income_for_year = Decimal(re.sub('[\$,]', '', league_income_for_year))
+                clean_league_expenditure_for_year = Decimal(re.sub('[\$,]', '', league_expenditure_for_year))
 
                 tuples_out = []
                 tuples_in = []
@@ -192,6 +199,15 @@ class TransferDataScraperAndProcessor:
 
                 print("------Finished calculating data for " + year_as_string + "----------")
             self.all_leagues.add(league)
+
+    def get_expenditure_per_year(self, league_total_transaction_data):
+        return league_total_transaction_data[1].find("span").get_text()
+
+    def get_income_per_year(self, league_total_transaction_data):
+        return league_total_transaction_data[0].find("span").get_text()
+
+    def get_income_expenditure_per_year_data(self, page_soup):
+        return page_soup.find("div", {"class": "transferbilanz"}).findAll("div", {"class": "text"})
 
     def get_header_country(self, box):
         return box.find("div", {"class": "box-header"}).find("img").get("alt")
