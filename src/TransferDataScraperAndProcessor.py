@@ -99,7 +99,7 @@ class TransferDataScraperAndProcessor:
                                 target_team_name = self.get_tr_team_name(tr)
                                 transfer_type = self.get_transfer_type(player_amount)
                                 processed_amount = self.process_amount(player_amount)
-
+                                calculated_adjusted_amount = self.get_adjusted_amount(processed_amount, 1000000000)
                                 if target_team:
                                     target_team_id = self.get_tr_team_id(target_team)
                                     if self.valid_football_club(target_team_id):
@@ -112,7 +112,7 @@ class TransferDataScraperAndProcessor:
                                                             target_team_name=target_team_name,
                                                             player_name=player_name,
                                                             transfer_type=transfer_type,
-                                                            year=year)
+                                                            year=year, adjusted_amount=calculated_adjusted_amount)
                                         league.transfers_for_year[year].add(link)
                                         league.all_transfers.add(link)
                                         self.all_transfers.add(link)
@@ -158,6 +158,7 @@ class TransferDataScraperAndProcessor:
                                 source_team_name = self.get_tr_team_name(tr)
                                 transfer_type = self.get_transfer_type(player_amount)
                                 processed_amount = self.process_amount(player_amount)
+                                calculated_adjusted_amount = self.get_adjusted_amount(processed_amount, 1000000000)
                                 if source_team:
                                     source_team_id = self.get_tr_team_id(source_team)
                                     if self.valid_football_club(source_team_id):
@@ -170,7 +171,7 @@ class TransferDataScraperAndProcessor:
                                                             target_team_name=target_team_name,
                                                             player_name=player_name,
                                                             transfer_type=transfer_type,
-                                                            year=year)
+                                                            year=year, adjusted_amount=calculated_adjusted_amount)
                                         league.transfers_for_year[year].add(link)
                                         league.all_transfers.add(link)
                                         self.all_transfers.add(link)
@@ -237,7 +238,7 @@ class TransferDataScraperAndProcessor:
         #         "?" or amount == "" or amount == "draft":
         #     return 0
         if '$' not in amount:
-            return 0
+            return Decimal(0)
         else:
             wo_currency_amount = amount[amount.index('$') + 1:]
             multiplier_symbol = wo_currency_amount[len(wo_currency_amount) - 1]
@@ -250,6 +251,10 @@ class TransferDataScraperAndProcessor:
                 amount = Decimal(wo_currency_amount)
             # Remove Trailing Zeros after Decimal Point
             return amount.quantize(Decimal(1)) if amount == amount.to_integral() else amount.normalize()
+
+    def get_adjusted_amount(self, amount, total):
+        return amount/Decimal(total)
+
 
     def get_transfer_type(self, amount):
         if ("loan" in amount or "Loan" in amount) and "end of" not in amount.lower():
@@ -283,9 +288,10 @@ class TransferDataScraperAndProcessor:
             if unique_edge in unique_edges:
                 unique_edges[unique_edge].increase_num_players()
                 unique_edges[unique_edge].increase_amount(link.amount)
+                unique_edges[unique_edge].increase_adjusted_amount(link.adjusted_amount)
             else:
                 unique_edge = UniqueEdge(link.source_team_id, link.target_team_id)
-                unique_edges[unique_edge] = EdgeWeight(1, link.amount)
+                unique_edges[unique_edge] = EdgeWeight(1, link.amount, link.adjusted_amount)
         return unique_edges
 
     def write_overall_output_with_weights(self, use_amount_as_weight=True):
@@ -306,6 +312,26 @@ class TransferDataScraperAndProcessor:
                     weight = str(self.all_unique_edges[edge].num_players)
                 writer.writerow([edge.source_id, edge.target_id, weight])
 
+    def write_output_file_with_weights(self, include_loans=False):
+        if include_loans:
+            edges_to_write = self.all_unique_edges
+            file_path_start = "../data/all_edges_including_loans_"
+        else:
+            edges_to_write = self.all_unique_non_loan_edges
+            file_path_start = "../data/all_edges_without_loans_"
+        file_path = file_path_start + str(self.start_year) + "_" + str(self.end_year) + ".csv"
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        with open(file_path, 'w', newline='\n', encoding='utf-8') as file:
+            writer = csv.writer(file, delimiter=',')
+            writer.writerow(["source", "target", "num_players", "total_amount", "total_adjusted_amount"])
+            for edge in edges_to_write:
+                num_players_as_string = str(edges_to_write[edge].num_players)
+                total_amount_as_string = str(edges_to_write[edge].total_amount)
+                total_adjusted_amount_as_string = str(edges_to_write[edge].total_adjusted_amount)
+                writer.writerow([edge.source_id, edge.target_id, num_players_as_string,
+                                 total_amount_as_string, total_adjusted_amount_as_string])
+
     def write_output_file_for_loans(self):
         file_path = "../data/overall_loan_network_" + str(self.start_year) + "_" + str(self.end_year) + ".csv"
         if os.path.exists(file_path):
@@ -316,23 +342,6 @@ class TransferDataScraperAndProcessor:
             for edge in self.all_unique_loan_edges:
                 writer.writerow([edge.source_id, edge.target_id, str(self.all_unique_loan_edges[edge].num_players)])
 
-    def write_output_file_for_non_loan_transfers(self, use_amount_as_weight=True):
-        if use_amount_as_weight:
-            file_path_start = "../data/overall_non_loan_network_weights_as_total_cost"
-        else:
-            file_path_start = "../data/overall_non_loan_network_weights_as_num_players"
-        file_path = file_path_start + str(self.start_year) + "_" + str(self.end_year) + ".csv"
-        if os.path.exists(file_path):
-            os.remove(file_path)
-        with open(file_path, 'w', newline='\n', encoding='utf-8') as file:
-            writer = csv.writer(file, delimiter=',')
-            writer.writerow(["source", "target", "weight"])
-            for edge in self.all_unique_non_loan_edges:
-                if use_amount_as_weight:
-                    weight = str(self.all_unique_edges[edge].total_amount)
-                else:
-                    weight = str(self.all_unique_edges[edge].num_players)
-                writer.writerow([edge.source_id, edge.target_id, weight])
 
     def put_all_clubs_in_a_league(self):
         other_league = League("Other")
@@ -346,26 +355,25 @@ class TransferDataScraperAndProcessor:
                 other_league.clubs.add(club)
         self.all_leagues.add(other_league)
 
-
-    def write_out_all_clubs_and_names(self):
-        file_path = "../data/all_nodes_"  + str(self.start_year) + "_" + str(self.end_year) + ".csv"
+    def write_out_all_clubs_and_leagues(self):
+        file_path = "../data/all_nodes_leagues_"  + str(self.start_year) + "_" + str(self.end_year) + ".csv"
         if os.path.exists(file_path):
             os.remove(file_path)
         with open(file_path, 'w', newline='\n', encoding='utf-8') as file:
             writer = csv.writer(file, delimiter=',')
-            writer.writerow(["id", "Label", "Modularity Class"])
+            writer.writerow(["Id", "Label", "League"])
             for league in self.all_leagues:
                 print(league.league_name + ", " + str(len(league.clubs)))
                 for club in league.clubs:
                     writer.writerow([str(club.club_id), club.club_name, league.league_name])
 
     def write_out_clubs_and_countries(self):
-        file_path = "../data/all_nodes_countries" + str(self.start_year) + "_" + str(self.end_year) + ".csv"
+        file_path = "../data/all_nodes_countries_" + str(self.start_year) + "_" + str(self.end_year) + ".csv"
         if os.path.exists(file_path):
             os.remove(file_path)
         with open(file_path, 'w', newline='\n', encoding='utf-8') as file:
             writer = csv.writer(file, delimiter=',')
-            writer.writerow(["id", "Label", "Modularity Class"])
+            writer.writerow(["Id", "Label", "Country"])
             for country in self.all_countries_and_clubs:
                 clubs = self.all_countries_and_clubs[country]
                 print(country + ", " + str(len(clubs)))

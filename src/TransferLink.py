@@ -2,7 +2,7 @@ class TransferLink:
     def __init__(self, source_team_id, target_team_id, amount=0, player_pos=None,
                  player_name=None, player_nationality=None,
                  source_team_league=None, target_team_league=None, source_team_name=None, target_team_name=None,
-                 transfer_type=None, year=2000):
+                 transfer_type=None, year=2000, adjusted_amount=0):
         self.source_team_id = source_team_id
         self.target_team_id = target_team_id
         self.amount = amount
@@ -15,6 +15,7 @@ class TransferLink:
         self.target_team_name = target_team_name
         self.transfer_type = transfer_type
         self.year = year
+        self.adjusted_amount = adjusted_amount
 
     def __eq__(self, other):
         if isinstance(other, self.__class__):
