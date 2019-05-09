@@ -1,4 +1,3 @@
-import requests
 import os
 import csv
 from bs4 import BeautifulSoup
@@ -9,7 +8,6 @@ from EdgeWeight import *
 from League import *
 from UniqueEdge import *
 from decimal import Decimal
-import re
 
 
 class TransferDataScraperAndProcessor:
@@ -41,13 +39,11 @@ class TransferDataScraperAndProcessor:
     def get_most_expensive_transfers_for_all_years(self, start_year, end_year):
         for year in range(start_year, end_year + 1):
             year_as_string = str(year)
-            url_start = "https://www.transfermarkt.us/transfers/transferrekorde/statistik/top/plus/1/galerie/0" \
-                        "?saison_id="
-            url_end = "&land_id=&ausrichtung=&spielerposition_id=&altersklasse=&leihe=&w_s="
-            full_url = url_start + year_as_string + url_end
-            print("Scraping most expensive transfer for " + year_as_string + "..........")
-            page_tree = requests.get(full_url, headers=self.headers)
-            page_soup = BeautifulSoup(page_tree.content, 'html.parser')
+            print("Finding most expensive Transfer for " + year_as_string)
+
+            source_file = "../html/" + year_as_string + "MostExpensiveTransfer.html"
+            with open(source_file, "rb") as fetched_content:
+                page_soup = BeautifulSoup(fetched_content, 'html.parser')
 
             amount = page_soup.find("td", {"class": "rechts hauptlink"}).find("a").get_text()
             processed_amount = self.process_amount(amount)
@@ -62,9 +58,6 @@ class TransferDataScraperAndProcessor:
                 max_amount_for_year = self.most_expensive_transfer_for_each_year[year]
                 league.transfers_for_year[year] = set()
                 year_as_string = str(year)
-                url_end = "&s_w=&leihe=0&leihe=1&intern=0"
-                full_url = self.url_start + LeagueURLConstants.league_names_with_urls[league_name] + \
-                           self.url_string_after_league_data + year_as_string + self.url_end
                 print("calculating data for " + year_as_string + "..........")
                 source_file = "../html/" + year_as_string + league_name + ".html"
                 with open(source_file, "rb") as fetched_content:
@@ -121,7 +114,7 @@ class TransferDataScraperAndProcessor:
                                 target_team_name = self.get_tr_team_name(tr)
                                 transfer_type = self.get_transfer_type(player_amount)
                                 processed_amount = self.process_amount(player_amount)
-                                calculated_adjusted_amount = self.get_adjusted_amount(processed_amount, max_amount_for_year)
+                                calculated_normalized_amount = self.get_normalized_amount(processed_amount, max_amount_for_year)
                                 if target_team:
                                     target_team_id = self.get_tr_team_id(target_team)
                                     if self.valid_football_club(target_team_id):
@@ -136,7 +129,7 @@ class TransferDataScraperAndProcessor:
                                                             player_nationality=player_nationality,
                                                             player_age=player_age,
                                                             transfer_type=transfer_type,
-                                                            year=year, adjusted_amount=calculated_adjusted_amount)
+                                                            year=year, normalized_amount=calculated_normalized_amount)
                                         league.transfers_for_year[year].add(link)
                                         league.all_transfers.add(link)
                                         self.all_transfers.add(link)
@@ -184,7 +177,7 @@ class TransferDataScraperAndProcessor:
                                 source_team_name = self.get_tr_team_name(tr)
                                 transfer_type = self.get_transfer_type(player_amount)
                                 processed_amount = self.process_amount(player_amount)
-                                calculated_adjusted_amount = self.get_adjusted_amount(processed_amount, max_amount_for_year)
+                                calculated_normalized_amount = self.get_normalized_amount(processed_amount, max_amount_for_year)
                                 if source_team:
                                     source_team_id = self.get_tr_team_id(source_team)
                                     if self.valid_football_club(source_team_id):
@@ -199,7 +192,7 @@ class TransferDataScraperAndProcessor:
                                                             target_team_name=target_team_name,
                                                             player_name=player_name,
                                                             transfer_type=transfer_type,
-                                                            year=year, adjusted_amount=calculated_adjusted_amount)
+                                                            year=year, normalized_amount=calculated_normalized_amount)
                                         league.transfers_for_year[year].add(link)
                                         league.all_transfers.add(link)
                                         self.all_transfers.add(link)
@@ -301,9 +294,8 @@ class TransferDataScraperAndProcessor:
             # Remove Trailing Zeros after Decimal Point
             return amount.quantize(Decimal(1)) if amount == amount.to_integral() else amount.normalize()
 
-    def get_adjusted_amount(self, amount, total):
+    def get_normalized_amount(self, amount, total):
         return amount/Decimal(total)
-
 
     def get_transfer_type(self, amount):
         if ("loan" in amount or "Loan" in amount) and "end of" not in amount.lower():
@@ -337,25 +329,34 @@ class TransferDataScraperAndProcessor:
             if unique_edge in unique_edges:
                 unique_edges[unique_edge].increase_num_players()
                 unique_edges[unique_edge].increase_amount(link.amount)
-                unique_edges[unique_edge].increase_adjusted_amount(link.adjusted_amount)
+                unique_edges[unique_edge].increase_normalized_amount(link.normalized_amount)
                 if link.player_age <= 24:
                     unique_edges[unique_edge].increase_num_young_players()
+                    unique_edges[unique_edge].increase_amount_for_young_players(link.amount)
+                    unique_edges[unique_edge].increase_normalized_amount_for_young_players(link.normalized_amount)
                 elif link.player_age > 24 and link.player_age < 30:
                     unique_edges[unique_edge].increase_num_middle_aged_players()
+                    unique_edges[unique_edge].increase_amount_for_middle_aged_players(link.amount)
+                    unique_edges[unique_edge].increase_normalized_amount_for_middle_aged_players(link.normalized_amount)
                 else:
                     unique_edges[unique_edge].increase_num_old_players()
-
+                    unique_edges[unique_edge].increase_amount_for_old_players(link.amount)
+                    unique_edges[unique_edge].increase_normalized_amount_for_old_players(link.normalized_amount)
             else:
                 unique_edge = UniqueEdge(link.source_team_id, link.target_team_id)
                 if link.player_age <= 24:
-                    unique_edges[unique_edge] = EdgeWeight(1, link.amount, link.adjusted_amount, num_young_players=1,
-                                                           num_middle_aged_players=0, num_old_players=0)
+                    unique_edges[unique_edge] = EdgeWeight(1, link.amount, link.normalized_amount, num_young_players=1,
+                                                           total_amount_for_young_players=link.amount,
+                                                           total_normalized_amount_for_young_players=link.normalized_amount)
                 elif link.player_age > 24 and link.player_age < 30:
-                    unique_edges[unique_edge] = EdgeWeight(1, link.amount, link.adjusted_amount, num_young_players=0,
-                                                           num_middle_aged_players=1, num_old_players=0)
+                    unique_edges[unique_edge] = EdgeWeight(1, link.amount, link.normalized_amount,
+                                                           num_middle_aged_players=1,
+                                                           total_amount_for_middle_aged_players=link.amount,
+                                                           total_normalized_amount_for_middle_aged_players=link.normalized_amount)
                 else:
-                    unique_edges[unique_edge] = EdgeWeight(1, link.amount, link.adjusted_amount, num_young_players=0,
-                                                           num_middle_aged_players=0, num_old_players=1)
+                    unique_edges[unique_edge] = EdgeWeight(1, link.amount, link.normalized_amount, num_old_players=1,
+                                                           total_amount_for_old_players=link.amount,
+                                                           total_normalized_amount_for_old_players=link.normalized_amount)
         return unique_edges
 
     def write_output_file_with_weights(self, include_loans=False):
@@ -370,19 +371,37 @@ class TransferDataScraperAndProcessor:
             os.remove(file_path)
         with open(file_path, 'w', newline='\n', encoding='utf-8') as file:
             writer = csv.writer(file, delimiter=',')
-            writer.writerow(["source", "target", "num_players", "total_amount", "total_adjusted_amount",
-                             "num_young_players, num_middle_aged_players, num_old_players"])
+            writer.writerow(["source", "target", "num_players", "total_amount", "total_normalized_amount",
+                             "num_young_players", "num_middle_aged_players", "num_old_players",
+                             "total_amount_for_young_players",
+                             "total_amount_for_middle_aged_players",
+                             "total_amount_for_old_players",
+                             "total_normalized_amount_for_young_players",
+                             "total_normalized_amount_for_middle_aged_players",
+                             "total_normalized_amount_for_old_players"])
             for edge in edges_to_write:
                 num_players_as_string = str(edges_to_write[edge].num_players)
                 total_amount_as_string = str(edges_to_write[edge].total_amount/100000000)
-                total_adjusted_amount_as_string = str(edges_to_write[edge].total_adjusted_amount)
+                total_normalized_amount_as_string = str(edges_to_write[edge].total_normalized_amount)
                 num_young_players_as_string = str(edges_to_write[edge].num_young_players)
                 num_middle_aged_players_as_string = str(edges_to_write[edge].num_middle_aged_players)
                 num_old_players_as_string = str(edges_to_write[edge].num_old_players)
+                total_amount_for_young_players_as_string = str(edges_to_write[edge].total_amount_for_young_players/100000000)
+                total_amount_for_middle_aged_players_as_string = str(edges_to_write[edge].total_amount_for_middle_aged_players/100000000)
+                total_amount_for_old_players_as_string = str(edges_to_write[edge].total_amount_for_old_players/100000000)
+                total_normalized_amount_for_young_players_as_string = str(edges_to_write[edge].total_normalized_amount_for_young_players)
+                total_normalized_amount_for_middle_aged_players_as_string = str(edges_to_write[edge].total_normalized_amount_for_middle_aged_players)
+                total_normalized_amount_for_old_players_as_string = str(edges_to_write[edge].total_normalized_amount_for_old_players)
+
                 writer.writerow([edge.source_id, edge.target_id, num_players_as_string,
-                                 total_amount_as_string, total_adjusted_amount_as_string,
+                                 total_amount_as_string, total_normalized_amount_as_string,
                                  num_young_players_as_string, num_middle_aged_players_as_string,
-                                 num_old_players_as_string])
+                                 num_old_players_as_string, total_amount_for_young_players_as_string,
+                                 total_amount_for_middle_aged_players_as_string,
+                                 total_amount_for_old_players_as_string,
+                                 total_normalized_amount_for_young_players_as_string,
+                                 total_normalized_amount_for_middle_aged_players_as_string,
+                                 total_normalized_amount_for_old_players_as_string])
 
     def write_output_file_for_loans(self):
         file_path = "../data/overall_loan_network_" + str(self.start_year) + "_" + str(self.end_year) + ".csv"
@@ -408,7 +427,7 @@ class TransferDataScraperAndProcessor:
         self.all_leagues.add(other_league)
 
     def write_out_all_clubs_and_leagues(self):
-        file_path = "../data/all_nodes_leagues_"  + str(self.start_year) + "_" + str(self.end_year) + ".csv"
+        file_path = "../data/all_nodes_leagues_" + str(self.start_year) + "_" + str(self.end_year) + ".csv"
         if os.path.exists(file_path):
             os.remove(file_path)
         with open(file_path, 'w', newline='\n', encoding='utf-8') as file:
@@ -429,4 +448,3 @@ class TransferDataScraperAndProcessor:
                 clubs = self.all_countries_and_clubs[country]
                 for club in clubs:
                     writer.writerow([str(club.club_id), club.club_name, club.club_country])
-
