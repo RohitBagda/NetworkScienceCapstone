@@ -382,16 +382,19 @@ class TransferDataScraperAndProcessor:
             for edge in edges_to_write:
                 num_players_as_string = str(edges_to_write[edge].num_players)
                 total_amount_as_string = str(edges_to_write[edge].total_amount/100000000)
-                total_normalized_amount_as_string = str(edges_to_write[edge].total_normalized_amount)
+                total_normalized_amount_as_string = str(edges_to_write[edge].total_normalized_amount*10)
                 num_young_players_as_string = str(edges_to_write[edge].num_young_players)
                 num_middle_aged_players_as_string = str(edges_to_write[edge].num_middle_aged_players)
                 num_old_players_as_string = str(edges_to_write[edge].num_old_players)
                 total_amount_for_young_players_as_string = str(edges_to_write[edge].total_amount_for_young_players/100000000)
                 total_amount_for_middle_aged_players_as_string = str(edges_to_write[edge].total_amount_for_middle_aged_players/100000000)
                 total_amount_for_old_players_as_string = str(edges_to_write[edge].total_amount_for_old_players/100000000)
-                total_normalized_amount_for_young_players_as_string = str(edges_to_write[edge].total_normalized_amount_for_young_players)
-                total_normalized_amount_for_middle_aged_players_as_string = str(edges_to_write[edge].total_normalized_amount_for_middle_aged_players)
-                total_normalized_amount_for_old_players_as_string = str(edges_to_write[edge].total_normalized_amount_for_old_players)
+                total_normalized_amount_for_young_players_as_string = str(edges_to_write[
+                                                                              edge].total_normalized_amount_for_young_players*10)
+                total_normalized_amount_for_middle_aged_players_as_string = str(edges_to_write[
+                                                                                    edge].total_normalized_amount_for_middle_aged_players*10)
+                total_normalized_amount_for_old_players_as_string = str(edges_to_write[
+                                                                            edge].total_normalized_amount_for_old_players*10)
 
                 writer.writerow([edge.source_id, edge.target_id, num_players_as_string,
                                  total_amount_as_string, total_normalized_amount_as_string,
