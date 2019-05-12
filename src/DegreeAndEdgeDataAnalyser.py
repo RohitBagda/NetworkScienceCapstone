@@ -97,8 +97,10 @@ def write_intc_num_players(results):
         writer = csv.writer(file, delimiter=',')
         writer.writerow(headings)
         for result in results:
-            data = [str(value) for value in results[result]]
-            writer.writerow(data)
+            row_data = [result]
+            for value in results[result]:
+                row_data.append(str(value))
+            writer.writerow(row_data)
 
 
 def write_rita_num_players(results):
@@ -110,8 +112,10 @@ def write_rita_num_players(results):
         writer = csv.writer(file, delimiter=',')
         writer.writerow(headings)
         for result in results:
-            data = [str(value) for value in results[result]]
-            writer.writerow(data)
+            row_data = [result]
+            for value in results[result]:
+                row_data.append(str(value))
+            writer.writerow(row_data)
 
 
 def write_intc_total_amount(results):
@@ -124,8 +128,10 @@ def write_intc_total_amount(results):
         writer = csv.writer(file, delimiter=',')
         writer.writerow(headings)
         for result in results:
-            data = [str(value) for value in results[result]]
-            writer.writerow(data)
+            row_data = [result]
+            for value in results[result]:
+                row_data.append(str(value))
+            writer.writerow(row_data)
 
 
 def write_rita_total_amount(results):
@@ -137,8 +143,10 @@ def write_rita_total_amount(results):
         writer = csv.writer(file, delimiter=',')
         writer.writerow(headings)
         for result in results:
-            data = [str(value) for value in results[result]]
-            writer.writerow(data)
+            row_data = [result]
+            for value in results[result]:
+                row_data.append(str(value))
+            writer.writerow(row_data)
 
 germany = "Germany"
 england = "England"
