@@ -1,0 +1,261 @@
+---
+title: "NETSCI"
+author: "Chukwubueze Hosea Ogeleka"
+date: "5/6/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+library(dplyr)
+library(ggplot2)
+library(ggrepel)
+```
+
+## Read the data 
+```{r cars} 
+dataset = read.csv("~/non_loan_all_statistics_data.csv")
+head(dataset)
+dataset_num_players = read.csv("~/non_loan_num_players.csv")
+head(dataset_num_players)
+```
+
+#plot in-degree vs out-degree
+```{r}
+generate_in_out_degree_plot_for_country = function(country_name){
+  data_filtered = dataset %>% filter(country == country_name)
+  ggplot(data=data_filtered, aes(x=weighted.outdegree, y=weighted.indegree, label=Label)) + geom_point(aes(size=eigencentrality, fill = "yellow", colour="yellow", stroke = 1)) + geom_text(aes(label=Label))
+}
+
+generate_linear_model_for_country = function(country_name){
+  data_filtered = dataset %>% filter(country == country_name)
+  model = lm(weighted.indegree ~ weighted.outdegree, data=data_filtered)
+  summary(model)
+}
+germany = "Germany"
+england = "England"
+france = "France"
+italy = "Italy"
+spain = "Spain"
+generate_in_out_degree_plot_for_country(country_name = germany)
+generate_linear_model_for_country(country_name = germany)
+
+generate_in_out_degree_plot_for_country(country_name = england)
+generate_linear_model_for_country(country_name = england)
+
+generate_in_out_degree_plot_for_country(country_name = france)
+generate_linear_model_for_country(country_name = france)
+
+generate_in_out_degree_plot_for_country(country_name = spain)
+generate_linear_model_for_country(country_name = spain)
+
+generate_in_out_degree_plot_for_country(country_name = italy)
+generate_linear_model_for_country(country_name = italy)
+
+```
+
+##plot in-degree vs eigenvector centrality
+```{r}
+generate_in_out_degree_plot_for_country = function(country_name, threshold, fill_colour){
+  data_filtered = dataset %>% filter(country == country_name) %>% top_n(15, weighted.indegree)
+  ggplot(data=data_filtered, aes(x=weighted.indegree, y=eigencentrality, label=Label)) + geom_point(aes(size=pageranks), color = fill_colour) + geom_text(aes(label=ifelse(weighted.indegree>threshold,as.character(Label),'')))
+
+}
+
+generate_linear_model_for_country = function(country_name){
+  #data_filtered = dataset %>% filter(country == country_name)
+  #model = glm(eigencentrality ~ weighted.indegree, data=data_filtered)
+  #summary(model)
+}
+germany = "Germany"
+england = "England"
+france = "France"
+italy = "Italy"
+spain = "Spain"
+generate_in_out_degree_plot_for_country(country_name = germany, threshold = 20, fill_colour = "red")
+generate_linear_model_for_country(country_name = germany)
+
+generate_in_out_degree_plot_for_country(country_name = england, threshold = 50, fill_colour = "orange")
+generate_linear_model_for_country(country_name = england)
+
+generate_in_out_degree_plot_for_country(country_name = france, threshold = 20, fill_colour = "green")
+generate_linear_model_for_country(country_name = france)
+
+generate_in_out_degree_plot_for_country(country_name = spain, threshold = 20, fill_colour = "blue")
+generate_linear_model_for_country(country_name = spain)
+
+generate_in_out_degree_plot_for_country(country_name = italy, threshold = 20, fill_colour = "pink")
+generate_linear_model_for_country(country_name = italy)
+
+```
+##Eigen centrality vs pagerank
+```{r}
+generate_in_out_degree_plot_for_country = function(country_name){
+  data_filtered = dataset %>% filter(country == country_name)
+  ggplot(data=data_filtered, aes(x=eigencentrality, y=pageranks, label=Label)) + geom_point(aes( colour=weighted.indegree, size=weighted.outdegree)) + geom_text_repel(aes(label=ifelse(weighted.indegree>20,as.character(Label),'')))
+}
+
+generate_linear_model_for_country = function(country_name){
+  #data_filtered = dataset %>% filter(country == country_name)
+  #model = glm(eigencentrality ~ weighted.indegree, data=data_filtered)
+  #summary(model)
+}
+germany = "Germany"
+england = "England"
+france = "France"
+italy = "Italy"
+spain = "Spain"
+portugal = "Portugal"
+belgium = "Belgium"
+russia = "Russia"
+ukraine = "Ukraine"
+netherlands = "Netherlands"
+turkey = "Turkey"
+austria = "Austria"
+greece = "Greece"
+croatia = "Croatia"
+czech_republic = "Czech Republic"
+
+generate_in_out_degree_plot_for_country(country_name = germany)
+generate_linear_model_for_country(country_name = germany)
+
+generate_in_out_degree_plot_for_country(country_name = england)
+generate_linear_model_for_country(country_name = england)
+
+generate_in_out_degree_plot_for_country(country_name = france)
+generate_linear_model_for_country(country_name = france)
+
+generate_in_out_degree_plot_for_country(country_name = spain)
+generate_linear_model_for_country(country_name = spain)
+
+generate_in_out_degree_plot_for_country(country_name = italy)
+generate_linear_model_for_country(country_name = italy)
+```
+##make countries
+```{r}
+countries = c(germany, england, spain, austria, france, czech_republic, greece, croatia, turkey, ukraine,
+              italy, belgium, netherlands, russia, portugal)
+```
+## Degree distribution
+
+```{r}
+#degrees_filtered = dataset %>% filter(weighted.indegree > 5)
+degrees <- dataset$weighted.indegree
+uniqueDegrees = unique(degrees)
+ 
+dataCdf <- function(x) { sum(degrees > x)}
+dataHist = lapply(uniqueDegrees, dataCdf)
+
+plot(uniqueDegrees, dataHist, main="in-degree distribution", 
+         xlab="in-degree value", ylab="nodes with in-degree of at least k" )
+plot(uniqueDegrees, dataHist, log="xy", main="Log of Nodes with in-degree", 
+         xlab="in-degree value of k", ylab="Log of nodes with in-degree of at least k")
+
+#####lograrithmic binning
+dataLogbin <-function(x) { sum(degrees >= 2^(x-1) & degrees < 2^x)}
+
+maxPow = ceiling(max(log(degrees)))
+pow = 1:maxPow
+dataBinned = sapply(pow, dataLogbin)
+inverseSizes = 2^(0:-(maxPow-1))
+
+plot(2^pow, dataBinned*inverseSizes, log="xy", 
+          main="In-degree values of clubs", xlab="in-degree", 
+          ylab="nodes with in-degree of at least k")
+
+#### fit alpha
+
+kmin = 0.001
+dataFit = degrees[degrees >= kmin]
+numPoints = length(dataFit)
+dataSum = sum(log(dataFit/(kmin - 1/2)))
+
+alpha = 1 + numPoints/dataSum
+
+print(alpha)
+
+```
+##stop
+
+##Plot eigen vs indegree all teams
+```{r}
+generate_in_vs_eigen = function() {
+    data_filtered = dataset %>% filter(country %in% countries)
+   ggplot(data=data_filtered, aes(x=weighted.indegree, y=eigencentrality)) + geom_point(colour = "red") + geom_text_repel(aes(label=ifelse(weighted.indegree>130,as.character(Label),'')), force = 5, arrow = arrow(length = unit(0.02, "npc"), type = "closed", ends = "first")) + xlab("Weighted In-degree") + ylab("Eigenvector Centrality")
+}
+
+generate_in_vs_eigen()
+```
+## plot pagerank vs eigen
+```{r}
+generate_eigen_vs_pagerank = function() {
+    data_filtered = dataset %>% filter(country %in% countries)
+   ggplot(data=data_filtered, aes(x=eigencentrality, y=pageranks)) + geom_point(aes(size=weighted.indegree),colour = "red") + geom_text_repel(aes(label=ifelse(eigencentrality>0.75,as.character(Label),'')), force = 5, arrow = arrow(length = unit(0.02, "npc"), type = "closed", ends = "first")) + xlab("Eigenvector Centrality") + ylab("PageRank") + labs(size = "Weighted In-degree")
+}
+
+generate_eigen_vs_pagerank()
+```
+##plot pagerank vs in-degree
+```{r}
+data_filtered = dataset %>% filter(country %in% countries)
+generate_page_rank_indegree = function() {
+  ggplot(data=data_filtered, aes(x=weighted.indegree, y=pageranks)) + geom_point(colour = "red") +  geom_text_repel(aes(label=ifelse(weighted.indegree>100,as.character(Label),'')), force = 5, arrow = arrow(length = unit(0.02, "npc"), type = "closed", ends = "first")) + xlab("Weighted In-degree") + ylab("PageRank") + geom_smooth(method='lm',formula=y~x)
+} 
+generate_page_rank_indegree()
+print(cor(dataset$pageranks, dataset$weighted.indegree))
+```
+
+## group in/out by country
+```{r}
+new_data = dataset %>% filter(country %in% countries)
+groups = aggregate(list(total_indegree = new_data$weighted.indegree, total_outdegree = new_data$weighted.outdegree), by=list(country=new_data$country), FUN=sum)
+groups
+#ggplot(groups, aes(x=country, y=total_indegree)) + geom_bar()
+```
+## group in/out by country using players
+```{r}
+new_data2 = dataset_num_players %>% filter(country %in% countries)
+groups2 = aggregate(list(total_indegree = new_data2$weighted.indegree, total_outdegree = new_data2$weighted.outdegree), by=list(country=new_data$country), FUN=sum)
+groups2
+```
+
+###check num players vs num teams traded with
+```{r}
+data_all_degrees =read.csv("~/non_loan_all_degree_measures_num_players.csv")
+plot_deg_vs_weighted_in = function() {
+  data_filtered2 = data_all_degrees %>% filter(country %in% countries)
+  ggplot(data=data_filtered2, aes(x=indegree, y=weighted.indegree)) +  geom_point(colour = "red") + xlab("In-degree") + ylab("Weighted In-degree")
+}
+plot_deg_vs_weighted_in()
+```
+## new dataset
+```{r}
+data = read.csv("~/non_loan_num_players_degree_data_vs_normalized_amount_degree_data.csv")
+head(data)
+show_in_out = function() {
+  new_data2 = data %>% filter(country %in% countries)
+  groups2 = aggregate(list(total_indegree = new_data2$num_players_weighted_indegree, total_outdegree = new_data2$num_players_weighted_outdegree), by=list(country=new_data2$country), FUN=sum)
+groups2
+}
+show_in_out()
+```
+##Plot money spent vs num players bought
+```{r}
+filt_data0 = data %>% filter(country %in% countries)
+filt_data = filt_data0 %>% filter(total_normalized_amount_weighted_indegree > 0)
+show_money_vs_players = function() {
+  ggplot(data=filt_data, aes(x=num_players_weighted_indegree, y=total_normalized_amount_weighted_indegree)) +  geom_point(size = 2, colour = "Red") + geom_text_repel(aes(label=ifelse(total_normalized_amount_weighted_indegree>100 | num_players_weighted_indegree > 450,as.character(Label),'')), force = 5, arrow = arrow(length = unit(0.02, "npc"), type = "closed", ends = "first")) + xlab("Number of Inward Transfers to Team") + ylab("Amount of Money Spent by Team")
+}
+show_money_vs_players()
+cor(filt_data$total_normalized_amount_weighted_indegree, filt_data$num_players_weighted_indegree)
+```
+
